@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django_reverse_admin import ReverseInlineModelAdmin
 from . import models
 
 
@@ -19,15 +20,16 @@ class MeansoftransportAdmin(admin.ModelAdmin):
     pass
 
 
+class WaypointsAdmin(admin.TabularInline):
+    model = models.Waypoints
+
+
 @admin.register(models.Routes)
 class RoutesAdmin(admin.ModelAdmin):
     list_display = ('name', 'active')
     list_filter = ('active',)
 
-
-@admin.register(models.Waypoints)
-class WaypointsAdmin(admin.ModelAdmin):
-    pass
+    inlines = [WaypointsAdmin]
 
 
 @admin.register(models.Permit)
