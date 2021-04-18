@@ -8,11 +8,14 @@ User = get_user_model()
 
 
 class Country(models.Model):
-    name = models.CharField(max_length=255, verbose_name='Название')
+    name = models.CharField(max_length=255, verbose_name='Название', unique=True)
     need_for_a_visa = models.BooleanField(default=False, verbose_name='Обязательность визы')
     need_a_passport = models.BooleanField(default=False, verbose_name='Обязательность загранпаспорта')
-    visa_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость визы')
-    pas_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость загранпаспорта')
+    visa_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость визы', default=0)
+    pas_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость загранпаспорта', default=0)
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name = 'Страны'
@@ -24,7 +27,7 @@ class Locality(models.Model):
     country_id = models.ForeignKey('Country', on_delete=models.DO_NOTHING, verbose_name='Страна')
 
     def __str__(self):
-        return 'Страна: {} - Город: {}'.format(self.country_id.name, self.name)
+        return '{} - {}'.format(self.country_id.name, self.name)
 
     class Meta:
         verbose_name = 'Населённые пункты'
@@ -32,7 +35,7 @@ class Locality(models.Model):
 
 
 class Meansoftransport(models.Model):
-    name = models.CharField(max_length=255, verbose_name='Транспорт')
+    name = models.CharField(max_length=255, verbose_name='Транспорт', unique=True)
 
     def __str__(self):
         return self.name
@@ -46,6 +49,9 @@ class Routes(models.Model):
     name = models.CharField(max_length=255, verbose_name='Маршрут')
     description = models.TextField(verbose_name='Описание')
     active = models.BooleanField(default=True, verbose_name='Есть ли в наличии?')
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name = 'Маршруты'
@@ -73,23 +79,22 @@ class Waypoints(models.Model):
     excursions = models.TextField(verbose_name='Экскурсии')
     routes_id = models.ForeignKey('Routes', on_delete=models.DO_NOTHING, verbose_name='Маршрут')
 
-    def __str__(self):
-        return 'Населённый пункт: {} - Номер точки в маршруте: {} - Вид транспорта: {}'\
-            .format(self.locality_id.name, self.route_point_number, self.means_of_transport_id.name)
-
     class Meta:
         verbose_name = 'Точки маршрута'
         verbose_name_plural = 'Точки маршрута'
 
 
 class Permit(models.Model):
-    name = models.CharField(max_length=255, verbose_name='Название')
+    name = models.CharField(max_length=255, verbose_name='Название', unique=True)
     description = models.TextField(verbose_name='Описание')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость')
-    begin_date = models.DateField(verbose_name='Дата начала путёвки')
-    end_date = models.DateField(verbose_name='Дата окончания путёвки')
+    begin_date = models.DateTimeField(verbose_name='Дата и время отправления')
+    end_date = models.DateTimeField(verbose_name='Дата и время возвращения')
     route_id = models.ForeignKey('Routes', on_delete=models.DO_NOTHING, verbose_name='Маршрут')
     active = models.BooleanField(default=True, verbose_name='Активна ли?')
+
+    def __str__(self):
+        return '{} - {}'.format(self.name, self.price)
 
     class Meta:
         verbose_name = 'Путёвки'
@@ -100,10 +105,13 @@ class Client(models.Model):
     surname = models.CharField(max_length=50, verbose_name='Фамилия')
     name = models.CharField(max_length=50, verbose_name='Имя')
     patronymic = models.CharField(max_length=50, verbose_name='Отчество')
-    phone = PhoneNumberField(verbose_name='Номер телефона')
+    phone = PhoneNumberField(verbose_name='Номер телефона', unique=True)
     registedate = models.DateTimeField(auto_now_add=True, verbose_name='Дата регистрации')
-    passport = models.CharField(max_length=255, verbose_name='Данные паспорта')
-    zagranpassport = models.CharField(max_length=255, verbose_name='Данные загранпаспорта')
+    passport = models.CharField(max_length=255, verbose_name='Данные паспорта', unique=True)
+    zagranpassport = models.CharField(max_length=255, verbose_name='Данные загранпаспорта', null=True, blank=True)
+
+    def __str__(self):
+        return '{} {} {} {}'.format(self.surname, self.name, self.patronymic, self.phone)
 
     class Meta:
         verbose_name = 'Клиенты'
@@ -114,21 +122,21 @@ class Client(models.Model):
 class Sellpermit(models.Model):
     permit_id = models.ForeignKey('Permit', on_delete=models.DO_NOTHING, verbose_name='Путёвка')
     date_time_sale = models.DateTimeField(auto_now_add=True, verbose_name='Дата и время продажи')
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость', null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость', null=True, blank=True)
     discount = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)],
                                    default=0, verbose_name='Скидка?')
-    price_disc = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена со скидкой', null=True)
+    price_disc = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена со скидкой',
+                                     null=True, blank=True)
     user_id = models.ForeignKey(User, verbose_name='Агент', on_delete=models.DO_NOTHING)
     client_id = models.ForeignKey('Client', on_delete=models.DO_NOTHING, verbose_name='Клиент')
 
-    def __str__(self):
-        return 'Путёвка: {}. Дата и время продажи: {}. Цена со скидкой: {}. Клиент: {}.'\
-            .format(self.permit_id.name, self.date_time_sale, self.price_disc, self.client_id.name)
-
-    def save(self):
+    def save(self, *args, **kwargs):
         self.price = self.permit_id.price
         self.price_disc = self.permit_id.price - self.permit_id.price * self.discount/100
         super().save()
+
+    def __str__(self):
+        return '{} {} -> {}'.format(self.client_id.name, self.client_id.surname, self.permit_id.name)
 
     class Meta:
         verbose_name = 'Список продаж'
