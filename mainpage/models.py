@@ -79,6 +79,9 @@ class Waypoints(models.Model):
     excursions = models.TextField(verbose_name='Экскурсии')
     routes_id = models.ForeignKey('Routes', on_delete=models.DO_NOTHING, verbose_name='Маршрут')
 
+    def __str__(self):
+        return '{}'.format(self.route_point_number)
+
     class Meta:
         verbose_name = 'Точки маршрута'
         verbose_name_plural = 'Точки маршрута'
